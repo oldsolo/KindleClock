@@ -5,6 +5,8 @@
 
 纯 HTML + CSS + ES5 JavaScript，无构建步骤、无第三方依赖。
 
+**在线体验：** <https://oldsolo.github.io/KindleClock/>
+
 **English version: [README.md](README.md)**
 
 ---
@@ -43,10 +45,25 @@ Kindle 浏览器是大约 2009 年的 WebKit（Safari 4 时代）。绝大多数
 
 ## 运行方式
 
-两种方式，任选其一。页面是完全自包含的（只用相对路径引用 `style.css` / `app.js`，
-没有网络请求，也没有用 `localStorage`），所以两种方式行为完全一致。
+三种方式，任选其一。页面是完全自包含的（只用相对路径引用 `style.css` / `app.js`，
+没有网络请求，也没有用 `localStorage`），所以三种方式行为完全一致。
 
-### 方式 A — 直接复制到 Kindle（之后不需要电脑）
+### 方式 A — GitHub Pages（什么都不用装）
+
+页面已发布在 <https://oldsolo.github.io/KindleClock/>，直接在 Kindle 浏览器地址栏输入
+即可。它从 `main` 分支的仓库根目录提供，因此每次 push 都会自动更新线上版本。
+
+查询参数在这里同样有效：
+
+```
+https://oldsolo.github.io/KindleClock/?tm=dark
+https://oldsolo.github.io/KindleClock/?safe=0.99
+```
+
+> **老设备可能连不上。** GitHub 要求 TLS 1.2，而 Kindle 7 上 2009 年的 WebKit 只能协商
+> 很老的 TLS 版本。如果页面在那台设备上打不开，请改用方式 B。10 代实测可用。
+
+### 方式 B — 直接复制到 Kindle（最可靠）
 
 1. 用 USB 连接 Kindle，等电脑识别并挂载。
 2. 把三个文件（`index.html`、`style.css`、`app.js`）复制到设备上的一个目录，
@@ -62,9 +79,10 @@ Kindle 浏览器的地址栏**是可以输入 `file://` 地址的**，并且能�
 文件。查询参数在这里同样有效，例如
 `file:///mnt/us/kindleclock/index.html?tm=dark`。
 
-做床头挂钟的话推荐这种方式 —— 文件拷进设备后，Kindle 就不再依赖你的电脑了。
+做床头挂钟的话推荐这种方式 —— 完全不需要网络，而且文件拷进设备后，Kindle 就不再依赖
+你的电脑了。
 
-### 方式 B — 局域网伺服
+### 方式 C — 局域网伺服
 
 ```bash
 python -m http.server 8000
@@ -74,7 +92,7 @@ python -m http.server 8000
 因为在电脑上编辑比在设备上方便得多。
 
 > **缓存提示**：Kindle 浏览器缓存很顽固。改完文件后请在 URL 后加 `?v=2` 之类的参数，
-> 否则可能一直在加载旧版本。用方式 A 时也可以直接删掉再重新拷贝。
+> 否则可能一直在加载旧版本。用方式 B 时也可以直接删掉再重新拷贝。
 
 ### 关闭休眠屏保
 
@@ -262,8 +280,12 @@ KindleClock/
 ├── style.css    91 行   布局、分隔符圆点、暗色模式
 ├── app.js      339 行   视口、旋转、时间、定时器
 ├── AGENTS.md            平台约束与踩坑记录
-├── README.md            本文件对应的英文版
-└── README.zh-CN.md     本文件
+├── README.md            英文版
+├── README.zh-CN.md     本文件
+└── LICENSE              MIT
+
+GitHub Pages 直接从仓库根目录发布 —— 没有构建步骤，也没有 `gh-pages` 分支，
+GitHub 原样伺服这些文件。
 ```
 
 ---

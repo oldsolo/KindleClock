@@ -5,6 +5,8 @@ Beijing time, rendered edge-to-edge, and updates on the minute boundary.
 
 Plain HTML + CSS + ES5 JavaScript. No build step, no dependencies.
 
+**Live demo:** <https://oldsolo.github.io/KindleClock/>
+
 **中文文档见 [README.zh-CN.md](README.zh-CN.md)**
 
 ---
@@ -43,10 +45,27 @@ Verified working on **Kindle 7 (Kindle 499, 600×800)** and **Kindle 10th gen**
 
 ## Running it
 
-Two ways. Pick either — the page is fully self-contained (relative references to
-`style.css` / `app.js`, no network calls, no `localStorage`), so both behave identically.
+Three ways. The page is fully self-contained (relative references to `style.css` /
+`app.js`, no network calls, no `localStorage`), so all three behave identically.
 
-### Option A — copy onto the Kindle (no PC needed afterwards)
+### Option A — GitHub Pages (nothing to install)
+
+The page is published at <https://oldsolo.github.io/KindleClock/>. Type that URL
+straight into the Kindle browser. It is served from the repository root on the `main`
+branch, so every push updates the live site automatically.
+
+Query parameters work here too:
+
+```
+https://oldsolo.github.io/KindleClock/?tm=dark
+https://oldsolo.github.io/KindleClock/?safe=0.99
+```
+
+> **Older devices may not be able to connect.** GitHub requires TLS 1.2, while the
+> 2009-era WebKit in a Kindle 7 only negotiates much older TLS versions. If the page
+> fails to load there, fall back to Option B. Verified working on the Kindle 10th gen.
+
+### Option B — copy onto the Kindle (most reliable)
 
 1. Connect the Kindle by USB and let the PC mount it.
 2. Copy the three files (`index.html`, `style.css`, `app.js`) into a folder on the
@@ -62,10 +81,10 @@ The Kindle browser does accept `file://` URLs typed into its address bar, and it
 `.html` files from `/mnt/us`. Query parameters work here too, e.g.
 `file:///mnt/us/kindleclock/index.html?tm=dark`.
 
-This is the better option for a bedside clock — once the files are on the device, the
-Kindle no longer needs your PC.
+This is the most dependable option for a bedside clock — it needs no network at all,
+and once the files are on the device the Kindle no longer needs your PC.
 
-### Option B — serve over the LAN
+### Option C — serve over the LAN
 
 ```bash
 python -m http.server 8000
@@ -76,7 +95,7 @@ iterating on the files, since editing them on the PC is far easier.
 
 > **Cache tip.** The Kindle browser caches aggressively. After editing files, append a
 > cache-buster such as `?v=2` to the URL, otherwise you may keep loading the old version.
-> With Option A you can also just delete and re-copy the files.
+> With Option B you can also just delete and re-copy the files.
 
 ### Preventing the screensaver
 
@@ -279,7 +298,11 @@ KindleClock/
 ├── app.js      339 lines   viewport, rotation, time, timers
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file
-└── README.zh-CN.md        中文文档
+├── README.zh-CN.md        中文文档
+└── LICENSE                 MIT
+
+Deployed to GitHub Pages straight from the repository root — there is no build step
+and no `gh-pages` branch. GitHub serves the files as-is.
 ```
 
 ---
