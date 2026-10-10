@@ -82,24 +82,32 @@ html, body {
   top: 0.44em;
 }
 
-/* ---- 竖屏布局：上小时 / 中间隔 / 下分钟 ----
+/* ---- 竖屏布局：上半页小时（靠左）、下半页分钟（靠右），两段紧接无间隔 ----
    横屏时 .grp 是 inline，渲染结果与「无 grp 包裹」完全一致，
-   所以横屏外观不受本节影响。 */
+   所以横屏外观完全不受本节影响。 */
+.clock.stacked {
+  left: 0;
+  top: 50%;
+  width: 100%;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
 .clock.stacked .grp {
   display: block;
 }
 
-/* 中间间隔：沿用原分隔符的 0.28em 宽度作为间距参照，并隐藏两个圆点 */
-.clock.stacked .sep {
-  display: block;
-  position: static;
-  width: auto;
-  height: 0.28em;
-  line-height: 0;
-  vertical-align: baseline;
+#grpH {
+  text-align: left;
 }
 
-.clock.stacked .dot {
+#grpM {
+  text-align: right;
+}
+
+/* 两段之间不留间隔。必须整体 display:none —— 只藏圆点的话，.sep 作为
+   inline-block 仍会占 0.28em 宽度与 0.72em 行高，在两段之间留下空隙。 */
+.clock.stacked .sep {
   display: none;
 }
 

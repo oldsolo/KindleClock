@@ -38,7 +38,7 @@ Verified working on **Kindle 7 (Kindle 499, 600×800)** and **Kindle 10th gen**
 - **Tap to rotate** — cycles four orientations, each with its own layout (see below).
 - **Fills the screen** in any orientation, on any model.
 - **Minute-boundary updates** with no cumulative drift.
-- Two-dot separator in landscape; a proportional gap in portrait.
+- Two-dot separator in landscape; in portrait the two rows touch with no gap.
 - Optional dark mode.
 
 ---
@@ -118,7 +118,7 @@ Each tap steps the rotation by −90°. **Landscape and portrait use different l
 | Taps | Rotation | Layout |
 |---|---|---|
 | 0 | `90°` | landscape — single line `17 ●● 08` rotated (default) |
-| 1 | `0°` | portrait — hours on top, minutes below, gap between |
+| 1 | `0°` | portrait — hours top-left, minutes bottom-right, no gap |
 | 2 | `-90°` | landscape again (mirrored order) |
 | 3 | `180°` | portrait again (stacked, mirrored) |
 | 4 | `90°` | back to landscape |
@@ -127,8 +127,11 @@ Both layouts share one set of markup: each digit pair is wrapped in a `.grp` spa
 `display:inline` in landscape (identical rendering to no wrapper at all) and `display:block`
 in portrait. Only a `stacked` class on `.clock` switches between them.
 
-In portrait the gap between the two rows is sized from the old separator width (`0.28em`),
-and the two dots are hidden.
+In portrait the clock stretches to the full container width so the two alignments differ —
+with a shrink-wrapped clock both rows would be the same width and `text-align` would be a
+no-op. `#grpH` is left-aligned, `#grpM` right-aligned, and the separator is hidden entirely
+(`display: none`, not just its dots — as an `inline-block` it would still reserve
+`0.28em` of width and `0.72em` of line height, leaving a gap).
 
 Only `click` is bound. On Kindle, `mouse*` and `touch*` are aliases of `click`, so
 binding several of them makes one tap rotate multiple times.
@@ -276,16 +279,19 @@ on local-x; swapping again there silently shrinks the font.
 The dots use absolute `em` offsets (`left: 0.07em`, `top: 0.16em / 0.44em`) and `.sep`
 has a real `height`. Do **not** use percentage `left` here: old WebKit degrades
 `left: 50%` against a zero-height containing block and throws the dots to the far left.
-In portrait the dots are hidden and `.sep` becomes a plain gap of the same `0.28em`.
+In portrait the whole `.sep` is hidden, so the two rows touch with no gap.
 
 ### Font sizing
 
 `fit()` measures, it does not compute. It sets `font-size: 100px`, reads the block's real
 `offsetWidth`/`offsetHeight`, then scales to fit the container. This matters because the
-two layouts have completely different bounding boxes — landscape is one line, portrait is
-two rows plus a gap — and hand-written formulas silently get one of them wrong. The
-container is sized so that it covers the viewport exactly after rotation, so "fits in the
-container" and "fits on screen" are the same condition.
+the two layouts have completely different bounding boxes — landscape is one line, portrait is
+two full-width rows — and hand-written formulas silently get one of them wrong. In portrait
+`.clock` is stretched to the full container width, so its `offsetWidth` always equals the
+container and carries no information; `fit()` therefore measures one digit pair instead
+(summing the two `span` widths inside `#grpH`). The container is sized so that it covers the
+viewport exactly after rotation, so "fits in the container" and "fits on screen" are the same
+condition.
 
 ### Viewport measurement
 
@@ -311,8 +317,8 @@ Measured on real hardware:
 ```
 KindleClock/
 ├── index.html   14 lines   markup + script tag
-├── style.css   114 lines   layout, two orientations, separator dots, dark mode
-├── app.js      338 lines   viewport, rotation, time, timers
+├── style.css   118 lines   layout, two orientations, separator dots, dark mode
+├── app.js      357 lines   viewport, rotation, time, timers
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file
 ├── README.zh-CN.md        中文文档

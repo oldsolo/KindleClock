@@ -81,16 +81,23 @@ portrait -> 90° CW -> 180° CW -> landscape.
   container long/short-side difference (measured 57px) because the origin sits at the *pre*-translate
   centre.
 - **Two layouts, one markup.** Landscape (±90°) is a single rotated line — unchanged from the
-  original design. Portrait (0°/180°) stacks hours above minutes with a gap between. Each digit
-  pair is wrapped in a `.grp` span: `display:inline` in landscape (renders identically to no
-  wrapper, so the original look is preserved bit-for-bit) and `display:block` in portrait. A
-  `stacked` class on `.clock` switches them; `applyLayout()` sets it from `rotDeg`.
-- The portrait gap reuses the old separator width (`0.28em`) as its size reference, and the two
-  dots are hidden in portrait (`display:none`).
-- `fit()` **measures, it does not compute**: set `font-size: 100px`, read the block's real
-  `offsetWidth`/`offsetHeight`, then scale to the container. Both layouts have different bounding
-  boxes, so a hand-written formula is guaranteed to be wrong for one of them. Keep the `0.995`
-  factor — it preserves the original landscape size exactly.
+  original design. Portrait (0°/180°) stacks hours above minutes with **no gap**, hours
+  left-aligned and minutes right-aligned. Each digit pair is wrapped in a `.grp` span
+  (`#grpH` / `#grpM`): `display:inline` in landscape (renders identically to no wrapper, so the
+  original look is preserved bit-for-bit) and `display:block` in portrait. A `stacked` class on
+  `.clock` switches them; `applyLayout()` sets it from `rotDeg`.
+- **Portrait `.clock` must stretch to `width: 100%`.** With a shrink-wrapped clock both rows are
+  the same width, so `text-align` has nothing to act on and the alignment is a silent no-op.
+- Hide `.sep` with `display: none`, **not** by hiding only `.dot` — as an `inline-block` it still
+  reserves `0.28em` of width and `0.72em` of line height, which re-introduces the gap.
+- `fit()` **measures, it does not compute**: set `font-size: 100px`, read the real bounding box,
+  then scale to the container. Both layouts differ, so a hand-written formula is guaranteed to be
+  wrong for one of them. Two cases:
+  - landscape — measure `.clock` itself (shrink-wrapped), keep the `0.995` factor so the original
+    size is preserved exactly;
+  - portrait — `.clock` is stretched to the container width, so its `offsetWidth` is always the
+    container width and carries no information. Measure one digit pair instead: sum the two
+    `span` widths inside `#grpH` and use that as the width constraint.
 
 ## Layout: viewport-driven, not model-specific
 There are **no hardcoded pixel dimensions**; every size comes from `measureViewport()`. The

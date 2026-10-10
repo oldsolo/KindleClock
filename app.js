@@ -159,6 +159,7 @@
   }
 
   var container = clock ? clock.parentNode : null; // .container
+  var grpH = document.getElementById('grpH');      // 竖屏时的小时分组
 var debugEl = null;
 
   // 旋转状态：90(横屏,默认) -> 0(竖屏) -> -90 -> 180 -> 90 ...
@@ -213,10 +214,13 @@ var debugEl = null;
   // 文字始终沿容器「局部 x 轴」排布，所以可用长度就是容器自身的宽度，
   // 与当前旋转角无关 —— 容器已按角度调好尺寸，横屏时宽=vp.h(长边)，竖屏时宽=vp.w。
   // 不要在这里按 upright 再交换一次，那样会取错轴导致字号偏小。
-  // 字号用测量法：先按 100px 量出整块的本地包围盒，再等比缩放到容器内。
+  // 字号用测量法：先按 100px 量出真实包围盒，再等比缩放到容器内。
   // 容器旋转后恰好覆盖视口，所以「块不超出容器」=「屏幕上放得下」。
-  // 竖屏时块是两行(小时+间隔+分钟)，横屏时是一行，行距与间隔高度都会影响
-  // 包围盒，所以必须实测而不能套公式。0.995 系数保留原横屏数值以免改变既有观感。
+  // 两种布局包围盒不同（横屏一行、竖屏两行），必须实测而不能套公式。
+  //   横屏：.clock 收缩包裹，直接量 .clock 即可。0.995 系数保留原数值，
+  //         以免改变横屏既有观感。
+  //   竖屏：.clock 铺满容器宽（否则两段左右对齐看不出差别），
+  //         offsetWidth 恒等于容器宽、没有信息量，改为量一组数字的实际宽度。
   function fit() {
     try {
       if (!clock) return;
@@ -231,12 +235,23 @@ var debugEl = null;
       var bh = clock.offsetHeight;  // 整块的本地高度
       if (!bw || !bh) return;
 
+      if (isStacked() && grpH) {
+        var ds = grpH.getElementsByTagName('span');
+        var gw = 0;
+        for (var k = 0; k < ds.length; k++) gw += ds[k].offsetWidth;
+        if (gw) bw = gw;
+      }
+
       var scale = Math.min((cw * SAFE * 0.995) / bw, (ch * SAFE) / bh);
       var size = Math.floor(100 * scale);
       if (size < 10) size = 10;
       clock.style.fontSize = size + 'px';
       if (debugMode) renderDebug();
     } catch (e) {}
+  }
+
+  function isStacked() {
+    return clock && clock.className && clock.className.indexOf('stacked') >= 0;
   }
 
   // ?debug=1：显示实测数据 + 校准图形，用于真机排查浏览器边框造成的偏移。
