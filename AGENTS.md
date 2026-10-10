@@ -80,10 +80,17 @@ portrait -> 90° CW -> 180° CW -> landscape.
   `transform-origin: 50% 50%`, `translate(...) rotate(...)` displaces the box by an extra
   container long/short-side difference (measured 57px) because the origin sits at the *pre*-translate
   centre.
-- `spaceForOrientation()` reads the container's own `offsetWidth`/`offsetHeight`: text always runs
-  along the container's **local x axis**, so `len = offsetWidth` and `cross = offsetHeight` with
-  **no** extra `upright` swap — the container sizing above already made the long axis local-x.
-  Swapping again there silently shrinks the font.
+- **Two layouts, one markup.** Landscape (±90°) is a single rotated line — unchanged from the
+  original design. Portrait (0°/180°) stacks hours above minutes with a gap between. Each digit
+  pair is wrapped in a `.grp` span: `display:inline` in landscape (renders identically to no
+  wrapper, so the original look is preserved bit-for-bit) and `display:block` in portrait. A
+  `stacked` class on `.clock` switches them; `applyLayout()` sets it from `rotDeg`.
+- The portrait gap reuses the old separator width (`0.28em`) as its size reference, and the two
+  dots are hidden in portrait (`display:none`).
+- `fit()` **measures, it does not compute**: set `font-size: 100px`, read the block's real
+  `offsetWidth`/`offsetHeight`, then scale to the container. Both layouts have different bounding
+  boxes, so a hand-written formula is guaranteed to be wrong for one of them. Keep the `0.995`
+  factor — it preserves the original landscape size exactly.
 
 ## Layout: viewport-driven, not model-specific
 There are **no hardcoded pixel dimensions**; every size comes from `measureViewport()`. The
@@ -96,8 +103,8 @@ There are **no hardcoded pixel dimensions**; every size comes from `measureViewp
 - Do **not** move the rotation onto `.clock` to "fix" the fill. A single `rotate(-90deg)` on
   `.clock` flips the glyphs upside down (net rotation becomes -90°, verified in a screenshot).
   The rotation belongs on `.container`; `.clock` only does `translate(-50%,-50%)`.
-- `fit()` clamps font size by BOTH axes: `len` (fill target) and `cross` (hard cap), both from the
-  container's own dimensions.
+- `fit()` clamps font size by both axes (width for the fill target, height as the hard cap), both
+  taken from the measured block bounding box.
 - **Separator dots must not use percentage `left`.** `.sep` needs a real `height` (not `0`) to be a
   resolvable containing block; old WebKit degrades `left:50%` against a zero-height box and throws
   the dots to the far left. Use absolute `em` offsets (`left:0.07em`, `top:0.16em/0.44em`).

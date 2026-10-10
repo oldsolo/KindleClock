@@ -198,6 +198,11 @@ var debugEl = null;
         // 老 WebKit 只认 -webkit-transform
         container.style.webkitTransform = tr;
         container.style.transform = tr;
+        // 0/180° 用「上小时 / 中间隔 / 下分钟」的竖排布局；±90° 保持单行
+        if (clock) {
+          var cls = (rotDeg === 0 || rotDeg === 180) ? 'clock stacked' : 'clock';
+          if (cls !== clock.className) clock.className = cls;
+        }
       }
       return true;
     } catch (e) {
@@ -208,32 +213,26 @@ var debugEl = null;
   // 文字始终沿容器「局部 x 轴」排布，所以可用长度就是容器自身的宽度，
   // 与当前旋转角无关 —— 容器已按角度调好尺寸，横屏时宽=vp.h(长边)，竖屏时宽=vp.w。
   // 不要在这里按 upright 再交换一次，那样会取错轴导致字号偏小。
-  function spaceForOrientation() {
-    var w = container ? (container.offsetWidth || 0) : 0;
-    var h = container ? (container.offsetHeight || 0) : 0;
-    if (!w || !h) {
-      // 极端兜底：容器还没布局好时退回视口测量值
-      var vp = measureViewport();
-      var up = (rotDeg === 0 || rotDeg === 180);
-      w = up ? vp.w : vp.h;
-      h = up ? vp.h : vp.w;
-    }
-    return {
-      len: w * SAFE,      // 文字排版长度上限（容器局部 x 轴）
-      cross: h * SAFE     // 文字高度方向上限（字号硬顶）
-    };
-  }
-
+  // 字号用测量法：先按 100px 量出整块的本地包围盒，再等比缩放到容器内。
+  // 容器旋转后恰好覆盖视口，所以「块不超出容器」=「屏幕上放得下」。
+  // 竖屏时块是两行(小时+间隔+分钟)，横屏时是一行，行距与间隔高度都会影响
+  // 包围盒，所以必须实测而不能套公式。0.995 系数保留原横屏数值以免改变既有观感。
   function fit() {
     try {
       if (!clock) return;
       applyLayout();
-      var m = spaceForOrientation();
+
+      var cw = container ? container.offsetWidth : 0;
+      var ch = container ? container.offsetHeight : 0;
+      if (!cw || !ch) return;
+
       clock.style.fontSize = '100px';
-      var natural = clock.offsetWidth || clock.scrollWidth;
-      if (!natural) return;
-      var size = Math.floor(100 * (m.len * 0.995) / natural);
-      if (size > m.cross) size = Math.floor(m.cross);
+      var bw = clock.offsetWidth;   // 整块的本地宽度
+      var bh = clock.offsetHeight;  // 整块的本地高度
+      if (!bw || !bh) return;
+
+      var scale = Math.min((cw * SAFE * 0.995) / bw, (ch * SAFE) / bh);
+      var size = Math.floor(100 * scale);
       if (size < 10) size = 10;
       clock.style.fontSize = size + 'px';
       if (debugMode) renderDebug();

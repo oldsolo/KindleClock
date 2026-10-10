@@ -1,5 +1,8 @@
-/* 通用 Kindle：尺寸由 JS 按实测视口设置（见 app.js measureViewport / applyLayout），
-   这里只给不执行 JS 时的初始尺寸，保证各机型都能先看到一个居中的时钟。 */
+/* KindleClock
+   横屏(±90°)：单行「时分」+ 竖排两圆点分隔符，旋转后相对设备正立 —— 与原版一致。
+   竖屏(0/180°)：上段小时、下段分钟，中间留一道间隔（间距参照原圆点尺寸 0.28em）。
+   两种布局共用同一套 markup，靠 .clock 上的 .stacked 类切换。 */
+
 * {
   margin: 0;
   padding: 0;
@@ -16,9 +19,8 @@ html, body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-/* 容器尺寸由 app.js 按当前旋转角写入（0/180 -> vp.w x vp.h，±90 -> vp.h x vp.w），
-   规则是「旋转后的包围盒恰好等于视口」。这里只给无 JS 时的兜底值。
-   绕自身中心旋转，四个朝向 90/0/-90/180 统一处理。 */
+/* 容器按角度显式定尺寸，绕自身中心旋转；尺寸由 app.js 写入。
+   规则：旋转后的包围盒恰好等于视口 —— 0/180° 用 vp.w x vp.h，±90° 用 vp.h x vp.w。 */
 .container {
   position: absolute;
   top: 0;
@@ -78,6 +80,27 @@ html, body {
 
 .dot-bot {
   top: 0.44em;
+}
+
+/* ---- 竖屏布局：上小时 / 中间隔 / 下分钟 ----
+   横屏时 .grp 是 inline，渲染结果与「无 grp 包裹」完全一致，
+   所以横屏外观不受本节影响。 */
+.clock.stacked .grp {
+  display: block;
+}
+
+/* 中间间隔：沿用原分隔符的 0.28em 宽度作为间距参照，并隐藏两个圆点 */
+.clock.stacked .sep {
+  display: block;
+  position: static;
+  width: auto;
+  height: 0.28em;
+  line-height: 0;
+  vertical-align: baseline;
+}
+
+.clock.stacked .dot {
+  display: none;
 }
 
 /* Dark mode via ?tm=dark added to body */
