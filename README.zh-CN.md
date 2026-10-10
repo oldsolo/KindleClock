@@ -277,4 +277,4 @@ KindleClock/
 
 ## 许可
 
-个人/学习用途，欢迎自由使用。
+[MIT](LICENSE) © 2026 oldsolo

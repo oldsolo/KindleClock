@@ -293,4 +293,4 @@ The Kindle browser behaviour documented above was verified against:
 
 ## License
 
-Personal/educational use. Use it freely.
+[MIT](LICENSE) © 2026 oldsolo
