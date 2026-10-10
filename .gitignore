@@ -1,0 +1,17 @@
+# OS / filesystem noise
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local dev-only static server (not part of the page itself)
+server.js
+node_modules/
+package-lock.json
+package.json

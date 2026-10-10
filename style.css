@@ -1,0 +1,91 @@
+/* 通用 Kindle：尺寸由 JS 按实测视口设置（见 app.js measureViewport / applyLayout），
+   这里只给不执行 JS 时的初始尺寸，保证各机型都能先看到一个居中的时钟。 */
+* {
+  margin: 0;
+  padding: 0;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #000000;
+  overflow: hidden;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* 容器尺寸由 app.js 按当前旋转角写入（0/180 -> vp.w x vp.h，±90 -> vp.h x vp.w），
+   规则是「旋转后的包围盒恰好等于视口」。这里只给无 JS 时的兜底值。
+   绕自身中心旋转，四个朝向 90/0/-90/180 统一处理。 */
+.container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-transform-origin: 50% 50%;
+  transform-origin: 50% 50%;
+}
+
+/* 老 WebKit(WebKit 531)只认 -webkit-transform，无前缀写法会被忽略，两个都要留。
+   时钟在已旋转的容器内不再二次旋转，保持字符正立。 */
+.clock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  white-space: nowrap;
+  line-height: 1;
+  font-weight: bold;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+/* 每个数字固定宽度，保证分隔符位置永不移位 */
+.digit {
+  display: inline-block;
+  width: 0.6em;
+  text-align: center;
+}
+
+/* 分隔符给出真实高度（而非 0），让圆点有一个高度可解析的包含块。
+   宽度固定，所以圆点位置在任何数字下都不变。 */
+.sep {
+  display: inline-block;
+  position: relative;
+  width: 0.28em;
+  height: 0.72em;
+  line-height: 0.72em;
+  vertical-align: baseline;
+}
+
+/* 圆点全部用绝对 em 值定位：不用百分比、不用负 margin。
+   零高包含块 + 百分比 left 在老 WebKit 上会把圆点甩到左边。 */
+.dot {
+  position: absolute;
+  left: 0.07em;
+  width: 0.14em;
+  height: 0.14em;
+  background: #000000;
+  -webkit-border-radius: 0.07em;
+  border-radius: 0.07em;
+}
+
+.dot-top {
+  top: 0.16em;
+}
+
+.dot-bot {
+  top: 0.44em;
+}
+
+/* Dark mode via ?tm=dark added to body */
+body.dark {
+  background: #000000;
+  color: #ffffff;
+}
+
+body.dark .dot {
+  background: #ffffff;
+}
