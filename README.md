@@ -43,6 +43,24 @@ Verified working on **Kindle 7 (Kindle 499, 600×800)** and **Kindle 10th gen**
 
 ---
 
+## Screenshots
+
+Real device (Kindle Paperwhite). Tap once to cycle to the next orientation.
+
+| Landscape (default) | Portrait |
+|:---:|:---:|
+| ![Landscape mode](img/kclock_90.png) | ![Portrait mode](img/kclock_00.png) |
+
+| Angle | Layout |
+|---|---|
+| `±90°` — landscape | single line `10:41`, rotated; hold the device sideways |
+| `0° / 180°` — portrait | `10` top-left, `42` bottom-right, no gap between them |
+
+The Kindle in the landscape shot is lying on its side — that is how it is used; the
+page content stays upright for whoever is looking at it.
+
+---
+
 ## Running it
 
 Three ways. The page is fully self-contained (relative references to `style.css` /
@@ -319,6 +337,7 @@ KindleClock/
 ├── index.html   14 lines   markup + script tag
 ├── style.css   118 lines   layout, two orientations, separator dots, dark mode
 ├── app.js      357 lines   viewport, rotation, time, timers
+├── img/                    real-device photos of both orientations
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file
 ├── README.zh-CN.md        中文文档
