@@ -36,6 +36,20 @@
   if (isNaN(fineOffsetMs)) fineOffsetMs = 0;
   var darkMode = (getParam('tm') === 'dark');
 
+  // ---- 墨水屏残影：每个整点整屏刷一次 ------------------------------
+  // 成因：时钟每分钟只改一两个数字，控制器因此永远选局部波形，而局部波形
+  // 不会去驱动「自上次刷新以来没有变化」的像素 —— 残影不是没刷干净，是压根没刷。
+  // 唯一有效的手段是让每个像素都发生一次变化。
+  //   ?flash=<n>     开关，传非 0 值即启用；缺省或 0 为关闭（关闭时行为完全不变）
+  //   ?flashms=<毫秒> 中间态的停留时长，默认 800
+  // 两个阶段必须落在两次独立重绘里：同一任务内改完立刻改回，浏览器只合成最终
+  // 那一帧，中间态从未存在，效果等于零。
+  var flashParam = getParam('flash');
+  var flashOn = (flashParam !== null && flashParam !== '0' && !isNaN(parseFloat(flashParam)));
+  var flashMs = parseFloat(getParam('flashms'));
+  if (isNaN(flashMs) || flashMs < 100) flashMs = 800;
+  var flashing = false;
+
   function pad2(n) {
     return n < 10 ? '0' + n : '' + n;
   }
@@ -46,24 +60,26 @@
     el.innerHTML = txt;
   }
 
-  function render() {
+  // 取当前应显示的时分。render() 与整点刷白判定共用同一个时间基准，
+  // 否则 ?ofs 微调之后两者会脱节。
+  function displayHM() {
     var t = (new Date()).getTime() + fineOffsetMs;
-    var hh, mm;
     if (useFixedTz) {
       // 固定时区：加偏移后必须按 UTC 读（加一次偏移、换一次坐标系，不能重复换算）
       var dd = new Date(t + tzHours * 3600000);
-      hh = pad2(dd.getUTCHours());
-      mm = pad2(dd.getUTCMinutes());
-    } else {
-      // ?tz=local：JS 可见的本地时间，Kindle 上等于 UTC
-      var d = new Date(t);
-      hh = pad2(d.getHours());
-      mm = pad2(d.getMinutes());
+      return { hh: pad2(dd.getUTCHours()), mm: pad2(dd.getUTCMinutes()) };
     }
-    setText(h1, hh.charAt(0));
-    setText(h2, hh.charAt(1));
-    setText(m1, mm.charAt(0));
-    setText(m2, mm.charAt(1));
+    // ?tz=local：JS 可见的本地时间，Kindle 上等于 UTC
+    var d = new Date(t);
+    return { hh: pad2(d.getHours()), mm: pad2(d.getMinutes()) };
+  }
+
+  function render() {
+    var hm = displayHM();
+    setText(h1, hm.hh.charAt(0));
+    setText(h2, hm.hh.charAt(1));
+    setText(m1, hm.mm.charAt(0));
+    setText(m2, hm.mm.charAt(1));
   }
 
   // ---- 视口测量 ----------------------------------------------------
@@ -318,8 +334,30 @@ var debugEl = null;
     return delay;
   }
 
+  // 整屏刷白：把背景翻到与常态相反的颜色，数字随即隐身 —— 浅色模式是黑字黑底、
+  // 暗色模式是白字白底，于是每一个像素都发生了变化，控制器必须做一次全屏更新。
+  // 停留后再清掉行内样式，背景翻回常态，数字重新显现，页面回到刷洗前的外观。
+  // 这里不需要隐藏 .clock：正文与圆点的颜色恰好就是背景要翻过去的那个颜色，
+  // 背景一变它们就看不见了，再加 visibility 属于多余动作。
+  function doFullClear() {
+    try {
+      if (!clock || flashing) return;
+      flashing = true;
+      document.body.style.background = darkMode ? '#ffffff' : '#000000';
+      setTimeout(function () {
+        document.body.style.background = ''; // 回到 CSS 类（.dark 等）的常态配色
+        flashing = false;
+      }, flashMs);
+    } catch (e) {
+      flashing = false;
+    }
+  }
+
   function tick() {
     render();
+    // 每个整点刷一次。tick() 本就落在分钟边界上，因此只需判断分钟数是否为 00。
+    // 用显示时间而非设备时间：?ofs 是显示层的微调，整点应以用户看到的为准。
+    if (flashOn && !flashing && displayHM().mm === '00') doFullClear();
     setTimeout(tick, msToNextMinute());
   }
 

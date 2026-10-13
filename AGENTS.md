@@ -35,6 +35,8 @@ no `localStorage`), so both behave identically.
   `getUTC*`; if you don't offset, read with the local getter. There is no single-conversion double
   count in the current code.
 - `?ofs=<ms>` adds a fine offset to the epoch in both modes; `?tm=dark` toggles dark mode.
+- `?flash=1` enables the hourly e-ink ghost clear; `?flashms=<ms>` sets how long the clearing
+  flash lasts (default `800`, verified 791ms observed at 20ms sampling). Off by default.
 - `?safe=<0.3..1>` overrides the fill factor (default `0.97`). Kindle 7 renders visibly smaller than
   the 10th gen, so `?safe=0.99` is worth trying there; `?safe=1` is the no-margin limit.
 - `?debug=1` prints a corner readout of `vp` / `scr` / `cont` / `fs` / `rot`, plus calibration
@@ -165,6 +167,29 @@ modern browser; code that works in Chrome will silently break.
   Do NOT introduce a per-second tick or a `<meta http-equiv="refresh">` reload —
   the recursive `setTimeout` already lands on the minute boundary for free and
   without flicker.
+
+- **E-ink ghosting:** a partial refresh drives only pixels that changed, so a clock that edits
+  2 of 4 digits a minute never resets the rest. The ghost is not left by a sloppy refresh, it
+  is never refreshed at all. The only cure is making **every** pixel change. `?flash=1` flips the
+  page background to the opposite of the current mode (black in light, white in dark) once an
+  hour, on the hour. The digits and the `.dot` separators are drawn in exactly the colour the
+  background is flipping *to*, so they vanish into it with no `visibility` trick and every pixel
+  differs from the frame before. After `?flashms` the inline style is dropped and the background
+  returns to normal - so light mode needs no restore step at all, white already is the normal
+  background. Do NOT add a `visibility`/`display:none` hide step; it is redundant.
+- The two phases **must** land in two separate repaints. Changing and reverting inside one task
+  means the browser only ever composes the final frame, the all-black intermediate never existed,
+  and the effect is exactly zero. The gap must also exceed one full-screen panel update or the two
+  updates merge. `flashMs` floor is `100`; that is a guard for explicit overrides only, not the
+  default.
+- The trigger lives in `tick()` and is gated on `displayHM().mm === '00'`, i.e. the **displayed**
+  minute, not the device minute, so `?ofs` stays consistent with what the user sees. `displayHM()`
+  exists solely so `render()` and this check share one time base; splitting them again lets `?ofs`
+  desynchronise them.
+- This is NOT the true `GC16` full flash that a page reload or a page turn triggers - it is two
+  full-area partial updates, which removes most of the ghost but does not guarantee zero. A
+  reload would be stricter but resets the rotation to landscape, because `rotDeg` is a plain
+  variable with no persistence. That trade is deliberate; do not "fix" it by adding a reload.
 
 ## Dev / verification
 - The artifact is plain HTML/CSS/JS with no planned build/test tooling.

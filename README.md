@@ -40,6 +40,7 @@ Verified working on **Kindle 7 (Kindle 499, 600×800)** and **Kindle 10th gen**
 - **Minute-boundary updates** with no cumulative drift.
 - Two-dot separator in landscape; in portrait the two rows touch with no gap.
 - Optional dark mode.
+- Optional hourly e-ink ghost clearing - see [E-ink ghosting](#e-ink-ghosting).
 
 ---
 
@@ -208,6 +209,42 @@ Note this aligns to the **device** clock, not to a network time source.
 
 ---
 
+## E-ink ghosting
+
+E-ink screens keep faint traces of what they showed before. The cause is waveform
+selection: a **partial** update drives only the pixels that actually changed, so a
+clock that edits 2 of its 4 digits once a minute never pushes the other pixels back
+to their resting state. The ghost is not left behind by a sloppy refresh - it is
+never refreshed at all.
+
+The only cure is to make **every pixel change at least once**. `?flash=1` does that
+once an hour, on the hour:
+
+`14:00  ->  screen goes all black for 800ms  ->  14:00`
+
+It flips the page background to the opposite of the current mode - black in light
+mode, white in dark mode. The digits and the separator dots are drawn in exactly the
+colour the background is flipping *to*, so they disappear into it on their own, with
+no `visibility` trick: every pixel now differs from the frame before, so the
+controller has no choice but a full-screen update. After `?flashms` the inline style
+is dropped and the background returns to normal. In light mode that needs no restore
+step at all - white already is the normal background.
+
+Two caveats worth knowing:
+
+- **It is not the real full flash.** A page reload or a page turn triggers the `GC16`
+  waveform, which drives black-white-black and resets every pixel. This is two
+  full-area partial updates: it removes most of the ghosting but does not
+  mathematically guarantee zero. A reload would be stricter - but it also resets the
+  rotation to landscape, because the angle lives in a plain variable with no
+  persistence. That trade is deliberate.
+- **800ms must exceed one full-screen panel update.** If the ghosting does not
+  clear, raise it: `?flashms=1500`.
+
+Off by default; it costs one visible flash per hour.
+
+---
+
 ## Query parameters
 
 | Parameter | Default | Effect |
@@ -220,6 +257,8 @@ Note this aligns to the **device** clock, not to a network time source.
 | `?debug=1` | off | Measurement readout + calibration graphics |
 | `?autochrome=1` | off | Auto-compensate browser chrome (see below) |
 | `?ox=<px>` / `?oy=<px>` | `0` | Manual position nudge; overrides `autochrome` |
+| `?flash=1` | off | Clear e-ink ghosting once an hour (see below) |
+| `?flashms=<ms>` | `800` | How long the hourly clearing flash lasts |
 
 Examples:
 
@@ -230,6 +269,7 @@ Examples:
 /?tm=dark                  dark mode
 /?safe=0.99                fill more of the screen
 /?debug=1                  show viewport measurements
+/?flash=1                  clear e-ink ghosting every hour
 ```
 
 ### Troubleshooting display issues
@@ -336,7 +376,7 @@ Measured on real hardware:
 KindleClock/
 ├── index.html   14 lines   markup + script tag
 ├── style.css   118 lines   layout, two orientations, separator dots, dark mode
-├── app.js      357 lines   viewport, rotation, time, timers
+├── app.js      391 lines   viewport, rotation, time, timers
 ├── img/                    real-device photos of both orientations
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file
