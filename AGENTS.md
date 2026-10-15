@@ -174,22 +174,34 @@ modern browser; code that works in Chrome will silently break.
   page background to the opposite of the current mode (black in light, white in dark) once an
   hour, on the hour. The digits and the `.dot` separators are drawn in exactly the colour the
   background is flipping *to*, so they vanish into it with no `visibility` trick and every pixel
-  differs from the frame before. After `?flashms` the inline style is dropped and the background
-  returns to normal - so light mode needs no restore step at all, white already is the normal
-  background. Do NOT add a `visibility`/`display:none` hide step; it is redundant.
+  differs from the frame before. Do NOT add a `visibility`/`display:none` hide step; it is
+  redundant.
+- **Three details of the flash are device-verified. Do NOT "modernise" them.** The working form
+  is `document.body.style.backgroundColor = '#000'` plus
+  `setTimeout("document.body.style.backgroundColor = '#FFF';", t)`:
+  1. `backgroundColor` **longhand** — the `background` shorthand resets every `background-*`
+     longhand and was measured not to produce a working refresh.
+  2. `setTimeout` in its **string** form, not a function. Both run; only the string form has been
+     seen to actually clear ghosting on a real Kindle. Do not convert it to a closure.
+  3. three-digit colours `#000` / `#FFF`.
+  The restore is an explicit write of the normal colour (`darkMode ? '#000' : '#FFF'`), not a
+  clear-the-inline-style fallback.
 - The two phases **must** land in two separate repaints. Changing and reverting inside one task
   means the browser only ever composes the final frame, the all-black intermediate never existed,
-  and the effect is exactly zero. The gap must also exceed one full-screen panel update or the two
-  updates merge. `flashMs` floor is `100`; that is a guard for explicit overrides only, not the
-  default.
+  and the effect is exactly zero. The gap must also outlast one full-screen panel update or the
+  two updates merge. `flashMs` default is `800`; the `100` floor is a guard for explicit overrides
+  only.
 - The trigger lives in `tick()` and is gated on `displayHM().mm === '00'`, i.e. the **displayed**
   minute, not the device minute, so `?ofs` stays consistent with what the user sees. `displayHM()`
   exists solely so `render()` and this check share one time base; splitting them again lets `?ofs`
   desynchronise them.
+- `?debug=1` shows a `fl <count>/<ms>` field. Use it on-device to separate "the code never ran"
+  from "it ran and the panel ignored it" — the Kindle browser caches hard, so a stale file is
+  always the first suspect.
 - This is NOT the true `GC16` full flash that a page reload or a page turn triggers - it is two
-  full-area partial updates, which removes most of the ghost but does not guarantee zero. A
-  reload would be stricter but resets the rotation to landscape, because `rotDeg` is a plain
-  variable with no persistence. That trade is deliberate; do not "fix" it by adding a reload.
+  full-area updates, which removes most of the ghost but does not guarantee zero. A reload would
+  be stricter but resets the rotation to landscape, because `rotDeg` is a plain variable with no
+  persistence. That trade is deliberate; do not "fix" it by adding a reload.
 
 ## Dev / verification
 - The artifact is plain HTML/CSS/JS with no planned build/test tooling.

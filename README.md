@@ -226,9 +226,19 @@ It flips the page background to the opposite of the current mode - black in ligh
 mode, white in dark mode. The digits and the separator dots are drawn in exactly the
 colour the background is flipping *to*, so they disappear into it on their own, with
 no `visibility` trick: every pixel now differs from the frame before, so the
-controller has no choice but a full-screen update. After `?flashms` the inline style
-is dropped and the background returns to normal. In light mode that needs no restore
-step at all - white already is the normal background.
+controller has no choice but a full-screen update. After `?flashms` the colour is
+written back explicitly.
+
+Three details of that snippet were verified on the device. Do not "tidy" them:
+
+- `backgroundColor`, the **longhand**. The `background` shorthand resets every
+  `background-*` longhand and was measured not to produce a working refresh.
+- `setTimeout` in its **string** form, not a function. Both run, but only the
+  string form has been seen to actually clear ghosting on a real Kindle.
+- Three-digit colours, `#000` / `#FFF`.
+
+Turn on `?debug=1` and the corner readout gains a `fl <count>/<ms>` field, so you
+can tell "the code never ran" apart from "it ran and the panel ignored it".
 
 Two caveats worth knowing:
 
@@ -238,8 +248,8 @@ Two caveats worth knowing:
   mathematically guarantee zero. A reload would be stricter - but it also resets the
   rotation to landscape, because the angle lives in a plain variable with no
   persistence. That trade is deliberate.
-- **800ms must exceed one full-screen panel update.** If the ghosting does not
-  clear, raise it: `?flashms=1500`.
+- **`?flashms` tunes the hold.** The gap has to outlast one full-screen panel
+  update; if the ghosting is still there, try `?flashms=1500` or `2000`.
 
 Off by default; it costs one visible flash per hour.
 

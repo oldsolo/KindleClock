@@ -48,7 +48,7 @@
   var flashOn = (flashParam !== null && flashParam !== '0' && !isNaN(parseFloat(flashParam)));
   var flashMs = parseFloat(getParam('flashms'));
   if (isNaN(flashMs) || flashMs < 100) flashMs = 800;
-  var flashing = false;
+  var flashCount = 0;   // 已触发的清除次数，?debug=1 里显示，用于确认真机确实走到了这条路径
 
   function pad2(n) {
     return n < 10 ? '0' + n : '' + n;
@@ -316,7 +316,8 @@ var debugEl = null;
         ' scr ' + vp.w + 'x' + vp.h +
         ' cont ' + cw + 'x' + ch +
         ' fs ' + clock.style.fontSize +
-        ' rot ' + rotDeg;
+        ' rot ' + rotDeg +
+        ' fl ' + flashCount + '/' + flashMs;
     } catch (e) {}
   }
 
@@ -339,25 +340,36 @@ var debugEl = null;
   // 停留后再清掉行内样式，背景翻回常态，数字重新显现，页面回到刷洗前的外观。
   // 这里不需要隐藏 .clock：正文与圆点的颜色恰好就是背景要翻过去的那个颜色，
   // 背景一变它们就看不见了，再加 visibility 属于多余动作。
+  // 整屏刷新清除残影。**这三个写法细节都是实机验证过的，不要"优化"：**
+  //   1. backgroundColor 长写法，不是 background 简写（简写会重置全部 background
+  //      长写属性，实测不触发有效刷新）
+  //   2. setTimeout 的字符串形式，不是函数形式 —— 两者都能跑，但只有这个写法在真机上
+  //      实测能刷出刷新并消除残影
+  //   3. 三位色值 #000 / #FFF
+  // 暗色模式按相反方向走：常态是黑底白字，所以先刷全白再刷回全黑，否则恢复阶段会
+  // 停在白底、把暗色模式变成浅色。
+  // 注意这里不用 visibility / display 隐藏 .clock：正文与分隔符圆点的颜色恰好就是
+  // 背景要翻过去的那个颜色（浅色模式下是黑字黑底），背景一变它们就隐入其中。
   function doFullClear() {
-    try {
-      if (!clock || flashing) return;
-      flashing = true;
-      document.body.style.background = darkMode ? '#ffffff' : '#000000';
-      setTimeout(function () {
-        document.body.style.background = ''; // 回到 CSS 类（.dark 等）的常态配色
-        flashing = false;
-      }, flashMs);
-    } catch (e) {
-      flashing = false;
+    if (!clock) return;
+    flashCount++;
+    if (darkMode) {
+      document.body.style.backgroundColor = '#FFF';
+      setTimeout("document.body.style.backgroundColor = '#000';", flashMs);
+    } else {
+      document.body.style.backgroundColor = '#000';
+      setTimeout("document.body.style.backgroundColor = '#FFF';", flashMs);
     }
+    // 调试读数的刷新与刷白互不依赖，用函数形式另起一个定时器即可，
+    // 不必混进上面那个字符串里。
+    if (debugMode) setTimeout(renderDebug, flashMs + 120);
   }
 
   function tick() {
     render();
     // 每个整点刷一次。tick() 本就落在分钟边界上，因此只需判断分钟数是否为 00。
     // 用显示时间而非设备时间：?ofs 是显示层的微调，整点应以用户看到的为准。
-    if (flashOn && !flashing && displayHM().mm === '00') doFullClear();
+    if (flashOn && displayHM().mm === '00') doFullClear();
     setTimeout(tick, msToNextMinute());
   }
 
