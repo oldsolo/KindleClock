@@ -35,9 +35,13 @@ no `localStorage`), so both behave identically.
   `getUTC*`; if you don't offset, read with the local getter. There is no single-conversion double
   count in the current code.
 - `?ofs=<ms>` adds a fine offset to the epoch in both modes; `?tm=dark` toggles dark mode.
-- `?flash=1` enables the hourly e-ink ghost clear; `?flashms=<ms>` sets how long the clearing
-  flash lasts (default `800`, verified 791-806ms observed). `?flashmin=<n>` is a test-only
-  override that flashes every N minutes instead of on the hour. Off by default.
+- The hourly e-ink ghost clear is **ON by default**: `?flash=0` (also `off`/`false`/`no`,
+  case-insensitive) turns it off, any other value means on. The parameter is inverted from the
+  usual convention on purpose — the feature is worth having by default, so the escape hatch is
+  the explicit one. `?flashms=<ms>` sets how long the clearing flash lasts (default `800`,
+  verified 791-806ms observed). `?flashmin=<n>` flashes every N minutes instead of on the hour.
+- **Device-verified end to end.** The flash, and the ghosting it removes, were both confirmed on
+  a real Kindle. Do not "simplify" any of it away without re-testing on hardware.
 - `displayHM()` exists solely so `render()` and the flash trigger read the clock through one
   shared time base. It reads the **displayed** time, not the device time, so `?ofs` stays
   consistent with what the user sees; splitting the two again lets `?ofs` desynchronise them.
@@ -209,11 +213,11 @@ modern browser; code that works in Chrome will silently break.
   changed so it flashes immediately. The first tick only records the hour and never flashes.
   Verified against a simulated 24h sequence: 0 flashes within an hour, exactly 1 on each
   boundary including the midnight wrap, 23 over a full day.
-- `?debug=1` shows `fl <count>/<ms> h<last flashed hour>`. That hour number is the trigger
-  state: if the clock rolls past an hour and `h` does not advance, the condition never matched
-  — as opposed to "it flashed and the panel ignored it". No need to wait an hour to find out
-  which. `?flashmin=<n>` flashes every N minutes instead, so the whole path can be verified on
-  the device inside one minute.
+- `?debug=1` shows `fl on <count>/<ms> h<last flashed hour>`, or `fl OFF` when the feature is
+  disabled. That hour number is the trigger state: if the clock rolls past an hour and `h` does
+  not advance, the condition never matched — as opposed to "it flashed and the panel ignored
+  it". No need to wait an hour to find out which. The explicit `on`/`OFF` matters because `h`
+  is empty before the first tick, which would otherwise be indistinguishable from disabled.
 - This is NOT the true `GC16` full flash that a page reload or a page turn triggers - it is two
   full-area updates, which removes most of the ghost but does not guarantee zero. A reload would
   be stricter but resets the rotation to landscape, because `rotDeg` is a plain variable with no

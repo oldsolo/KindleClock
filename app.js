@@ -36,16 +36,19 @@
   if (isNaN(fineOffsetMs)) fineOffsetMs = 0;
   var darkMode = (getParam('tm') === 'dark');
 
-  // ---- 墨水屏残影：每个整点整屏刷一次 ------------------------------
+  // ---- 墨水屏残影：每个整点整屏刷一次（默认开启）--------------------
   // 成因：时钟每分钟只改一两个数字，控制器因此永远选局部波形，而局部波形
   // 不会去驱动「自上次刷新以来没有变化」的像素 —— 残影不是没刷干净，是压根没刷。
-  // 唯一有效的手段是让每个像素都发生一次变化。
-  //   ?flash=<n>     开关，传非 0 值即启用；缺省或 0 为关闭（关闭时行为完全不变）
-  //   ?flashms=<毫秒> 中间态的停留时长，默认 800
+  // 唯一的有效手段是让每个像素都发生一次变化。实测真机上有效，且残影清除干净。
+  //   ?flash=0 / off / false   关闭（默认开启）
+  //   ?flash=<其它值>           等同开启，保留旧写法以免旧链接失效
+  //   ?flashms=<毫秒>           中间态停留时长，默认 800
+  //   ?flashmin=<分钟>          改为每 N 分钟刷一次（默认 0 = 按整点）
   // 两个阶段必须落在两次独立重绘里：同一任务内改完立刻改回，浏览器只合成最终
   // 那一帧，中间态从未存在，效果等于零。
   var flashParam = getParam('flash');
-  var flashOn = (flashParam !== null && flashParam !== '0' && !isNaN(parseFloat(flashParam)));
+  var flashOn = true;
+  if (flashParam !== null && /^(0|off|false|no)$/i.test(flashParam)) flashOn = false;
   var flashMs = parseFloat(getParam('flashms'));
   if (isNaN(flashMs) || flashMs < 100) flashMs = 800;
   // 测试用：?flashmin=<分钟> 每 N 分钟刷一次（默认 0 = 按整点）。
@@ -281,12 +284,16 @@ var debugEl = null;
   // 若红线与屏幕边缘不重合、且绿十字不在红线中心，就说明布局视口与可见区不一致，
   // 这类偏移无法从JS 探测，需要用 ?ox= / ?oy= 手工补偿。
   // 调试读数里的 fl 字段：
-  //   fl <已刷次数>/<停留ms> h<上次刷新的显示小时>   —— 整点模式
-  //   fl <已刷次数>/<停留ms> min<n>                 —— 测试模式
+  //   fl on <已刷次数>/<停留ms> h<上次刷新的显示小时>  —— 整点模式
+  //   fl on <已刷次数>/<停留ms> min<n>                —— 测试模式
+  //   fl OFF                                          —— 功能已关闭
+  // 小时号在第一个 tick 之前是空的，所以必须单独标出 on/OFF，否则「还没到整点」和
+  // 「功能关着」在读数上完全无法区分。
   // 整点模式下 h 后面那个小时号就是判据状态：跨过整点后它若没有跟着前进，
   // 说明触发条件根本没满足（而不是「刷了但屏幕没反应」），不必等一小时才发现。
   function flashTag() {
-    return ' fl ' + flashCount + '/' + flashMs +
+    if (!flashOn) return ' fl OFF';
+    return ' fl on ' + flashCount + '/' + flashMs +
       (flashMin > 0 ? ' min' + flashMin : ' h' + lastFlashHour);
   }
 

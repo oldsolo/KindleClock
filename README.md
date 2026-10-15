@@ -36,8 +36,8 @@ compounds: measured at ~0.35s constant after 3 hours, where the obvious `setInte
 version drifts 3s over the same span.
 
 **Written for e-ink, not for a browser.** The DOM is touched only when the minute actually
-changes, so the page never flickers and never ghosts itself. An optional hourly full-screen
-clear (`?flash=1`) removes the ghosting that does build up over the hours.
+changes, so the page never flickers and never ghosts itself. Every hour the screen is cleared
+once, full-area, which removes the ghosting that does build up over time.
 
 **Three files, no build, no network, no PC.** Copy `index.html`, `style.css` and `app.js`
 to `/mnt/us/`, type a `file://` URL into the address bar, and the Kindle runs it standalone
@@ -75,8 +75,9 @@ Beyond the six points above:
   and `?debug=1` prints measured viewport numbers plus calibration graphics for the case
   where the browser chrome does not line up with the physical screen. See
   [Query parameters](#query-parameters).
-- The hourly ghost clear is off by default; [E-ink ghosting](#e-ink-ghosting) explains what
-  it costs and why it has to look the way it does.
+- The hourly ghost clear is on by default; `?flash=0` disables it.
+  [E-ink ghosting](#e-ink-ghosting) explains what it costs and why it has to look the way it
+  does.
 
 ---
 
@@ -284,7 +285,8 @@ Two caveats worth knowing:
 - **`?flashms` tunes the hold.** The gap has to outlast one full-screen panel
   update; if the ghosting is still there, try `?flashms=1500` or `2000`.
 
-Off by default; it costs one visible flash per hour.
+On by default. One visible flash per hour is a fair price for an hour of
+accumulation; disable it with `?flash=0` if you disagree.
 
 ---
 
@@ -300,9 +302,9 @@ Off by default; it costs one visible flash per hour.
 | `?debug=1` | off | Measurement readout + calibration graphics |
 | `?autochrome=1` | off | Auto-compensate browser chrome (see below) |
 | `?ox=<px>` / `?oy=<px>` | `0` | Manual position nudge; overrides `autochrome` |
-| `?flash=1` | off | Clear e-ink ghosting once an hour (see below) |
+| `?flash=0` | on | Clear e-ink ghosting once an hour; `?flash=0` turns it off (see below) |
 | `?flashms=<ms>` | `800` | How long the hourly clearing flash lasts |
-| `?flashmin=<n>` | — | Test only: clear every `n` minutes instead of on the hour |
+| `?flashmin=<n>` | — | Clear every `n` minutes instead of on the hour |
 
 Examples:
 
@@ -313,8 +315,8 @@ Examples:
 /?tm=dark                  dark mode
 /?safe=0.99                fill more of the screen
 /?debug=1                  show viewport measurements
-/?flash=1                  clear e-ink ghosting every hour
-/?flash=1&flashmin=1       same, but every minute — for testing
+/?flash=0                  no hourly ghost clear
+/?flashmin=1               ghost clear every minute — for testing
 ```
 
 ### Troubleshooting display issues
@@ -421,7 +423,7 @@ Measured on real hardware:
 KindleClock/
 ├── index.html   14 lines   markup + script tag
 ├── style.css   122 lines   layout, two orientations, separator dots, dark mode
-├── app.js      439 lines   viewport, rotation, time, timers, ghost clear
+├── app.js      446 lines   viewport, rotation, time, timers, ghost clear
 ├── img/                    real-device photos of both orientations
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file
