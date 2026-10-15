@@ -36,7 +36,11 @@ no `localStorage`), so both behave identically.
   count in the current code.
 - `?ofs=<ms>` adds a fine offset to the epoch in both modes; `?tm=dark` toggles dark mode.
 - `?flash=1` enables the hourly e-ink ghost clear; `?flashms=<ms>` sets how long the clearing
-  flash lasts (default `800`, verified 791ms observed at 20ms sampling). Off by default.
+  flash lasts (default `800`, verified 791-806ms observed). `?flashmin=<n>` is a test-only
+  override that flashes every N minutes instead of on the hour. Off by default.
+- `displayHM()` exists solely so `render()` and the flash trigger read the clock through one
+  shared time base. It reads the **displayed** time, not the device time, so `?ofs` stays
+  consistent with what the user sees; splitting the two again lets `?ofs` desynchronise them.
 - `?safe=<0.3..1>` overrides the fill factor (default `0.97`). Kindle 7 renders visibly smaller than
   the 10th gen, so `?safe=0.99` is worth trying there; `?safe=1` is the no-margin limit.
 - `?debug=1` prints a corner readout of `vp` / `scr` / `cont` / `fs` / `rot`, plus calibration
@@ -191,13 +195,25 @@ modern browser; code that works in Chrome will silently break.
   and the effect is exactly zero. The gap must also outlast one full-screen panel update or the
   two updates merge. `flashMs` default is `800`; the `100` floor is a guard for explicit overrides
   only.
-- The trigger lives in `tick()` and is gated on `displayHM().mm === '00'`, i.e. the **displayed**
-  minute, not the device minute, so `?ofs` stays consistent with what the user sees. `displayHM()`
-  exists solely so `render()` and this check share one time base; splitting them again lets `?ofs`
-  desynchronise them.
-- `?debug=1` shows a `fl <count>/<ms>` field. Use it on-device to separate "the code never ran"
-  from "it ran and the panel ignored it" — the Kindle browser caches hard, so a stale file is
-  always the first suspect.
+- **Do NOT gate the flash on `displayHM().mm === '00'`.** That was the first version and it
+  never fired on the device. The Kindle's `setTimeout` fires slightly *early*, so the callback
+  can land on `xx:59.93`, the minute reads back as `59` rather than `00`, and that whole hour
+  is skipped silently — the next tick is already `:01`, so there is no second chance. The
+  `delay < 150` guard in `msToNextMinute()` protects the *computed delay*, not the *firing
+  moment*. A clock showing `:59` for an extra moment is invisible; a once-an-hour condition
+  that silently never matches is not.
+- The trigger therefore lives in `tick()` and watches whether the **displayed hour changed**,
+  not what the minute reads. A full-screen refresh does not care whether it is `:00.0` or
+  `:59.9`, and an hour-change test self-heals in both directions: fired early the hour has not
+  changed yet so it skips, and the next tick at `:00` picks it up; fired late the hour already
+  changed so it flashes immediately. The first tick only records the hour and never flashes.
+  Verified against a simulated 24h sequence: 0 flashes within an hour, exactly 1 on each
+  boundary including the midnight wrap, 23 over a full day.
+- `?debug=1` shows `fl <count>/<ms> h<last flashed hour>`. That hour number is the trigger
+  state: if the clock rolls past an hour and `h` does not advance, the condition never matched
+  — as opposed to "it flashed and the panel ignored it". No need to wait an hour to find out
+  which. `?flashmin=<n>` flashes every N minutes instead, so the whole path can be verified on
+  the device inside one minute.
 - This is NOT the true `GC16` full flash that a page reload or a page turn triggers - it is two
   full-area updates, which removes most of the ghost but does not guarantee zero. A reload would
   be stricter but resets the rotation to landscape, because `rotDeg` is a plain variable with no

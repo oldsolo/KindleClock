@@ -261,8 +261,17 @@ Three details of that snippet were verified on the device. Do not "tidy" them:
   string form has been seen to actually clear ghosting on a real Kindle.
 - Three-digit colours, `#000` / `#FFF`.
 
-Turn on `?debug=1` and the corner readout gains a `fl <count>/<ms>` field, so you
-can tell "the code never ran" apart from "it ran and the panel ignored it".
+Turn on `?debug=1` and the corner readout gains an `fl <count>/<ms> h<hour>` field. That
+hour number is the trigger state: if the clock rolls past an hour and it does not advance,
+the condition never matched, as opposed to "it flashed and the panel ignored it". You do not
+have to wait an hour to tell those apart. `?flashmin=1` clears every minute instead, so the
+whole path can be checked on the device inside a minute.
+
+The trigger watches whether the **displayed hour changed**, never what the minute reads. The
+Kindle's `setTimeout` fires slightly early, so a callback landing on `xx:59.93` would read a
+minute of `59` and skip the hour entirely — and the next tick is already `:01`, so there
+would be no second chance. A full-screen refresh does not care whether it happens at `:00.0`
+or `:59.9`, and an hour-change test self-heals either way.
 
 Two caveats worth knowing:
 
@@ -293,6 +302,7 @@ Off by default; it costs one visible flash per hour.
 | `?ox=<px>` / `?oy=<px>` | `0` | Manual position nudge; overrides `autochrome` |
 | `?flash=1` | off | Clear e-ink ghosting once an hour (see below) |
 | `?flashms=<ms>` | `800` | How long the hourly clearing flash lasts |
+| `?flashmin=<n>` | — | Test only: clear every `n` minutes instead of on the hour |
 
 Examples:
 
@@ -304,6 +314,7 @@ Examples:
 /?safe=0.99                fill more of the screen
 /?debug=1                  show viewport measurements
 /?flash=1                  clear e-ink ghosting every hour
+/?flash=1&flashmin=1       same, but every minute — for testing
 ```
 
 ### Troubleshooting display issues
@@ -410,7 +421,7 @@ Measured on real hardware:
 KindleClock/
 ├── index.html   14 lines   markup + script tag
 ├── style.css   122 lines   layout, two orientations, separator dots, dark mode
-├── app.js      403 lines   viewport, rotation, time, timers, ghost clear
+├── app.js      439 lines   viewport, rotation, time, timers, ghost clear
 ├── img/                    real-device photos of both orientations
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file

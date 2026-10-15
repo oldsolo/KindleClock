@@ -48,7 +48,13 @@
   var flashOn = (flashParam !== null && flashParam !== '0' && !isNaN(parseFloat(flashParam)));
   var flashMs = parseFloat(getParam('flashms'));
   if (isNaN(flashMs) || flashMs < 100) flashMs = 800;
+  // 测试用：?flashmin=<分钟> 每 N 分钟刷一次（默认 0 = 按整点）。
+  // 真机验证刷白不必等一小时，用这个参数一分钟内就能看到结果。
+  var flashMin = parseFloat(getParam('flashmin'));
+  if (isNaN(flashMin) || flashMin < 1) flashMin = 0;
   var flashCount = 0;   // 已触发的清除次数，?debug=1 里显示，用于确认真机确实走到了这条路径
+  var tickCount = 0;    // 测试模式下的分钟计数
+  var lastFlashHour = '';  // 上一次刷过的显示小时，首次 tick 只记录不刷
 
   function pad2(n) {
     return n < 10 ? '0' + n : '' + n;
@@ -274,6 +280,16 @@ var debugEl = null;
   // 红色边框 = JS 认为的布局视口边界；绿色十字 = 屏幕几何中心。
   // 若红线与屏幕边缘不重合、且绿十字不在红线中心，就说明布局视口与可见区不一致，
   // 这类偏移无法从JS 探测，需要用 ?ox= / ?oy= 手工补偿。
+  // 调试读数里的 fl 字段：
+  //   fl <已刷次数>/<停留ms> h<上次刷新的显示小时>   —— 整点模式
+  //   fl <已刷次数>/<停留ms> min<n>                 —— 测试模式
+  // 整点模式下 h 后面那个小时号就是判据状态：跨过整点后它若没有跟着前进，
+  // 说明触发条件根本没满足（而不是「刷了但屏幕没反应」），不必等一小时才发现。
+  function flashTag() {
+    return ' fl ' + flashCount + '/' + flashMs +
+      (flashMin > 0 ? ' min' + flashMin : ' h' + lastFlashHour);
+  }
+
   function renderDebug() {
     try {
       if (!debugEl) {
@@ -316,8 +332,7 @@ var debugEl = null;
         ' scr ' + vp.w + 'x' + vp.h +
         ' cont ' + cw + 'x' + ch +
         ' fs ' + clock.style.fontSize +
-        ' rot ' + rotDeg +
-        ' fl ' + flashCount + '/' + flashMs;
+        ' rot ' + rotDeg + flashTag();
     } catch (e) {}
   }
 
@@ -367,9 +382,30 @@ var debugEl = null;
 
   function tick() {
     render();
-    // 每个整点刷一次。tick() 本就落在分钟边界上，因此只需判断分钟数是否为 00。
+    // 整点刷一次。**不要靠读回分钟数判断**（曾写成 displayHM().mm === '00'）：
+    // Kindle 的 setTimeout 会略微提前触发，回调若落在 xx:59.93，读到的 mm 是 59
+    // 而不是 00，这一次整点就被静默跳过，而下一个 tick 已经是 01，不会再有第二次
+    // 机会。msToNextMinute() 里的 delay<150 保护的是「算出多长的延迟」，管不到
+    // 「实际什么时候触发」。
+    // 改为检测显示小时是否变化。全屏刷新本来就不在乎是 :00.0 还是 :59.9，而小时
+    // 变化这个判据在提前和滞后两种情况下都能自愈：提前触发时小时还没变、本次不刷，
+    // 下一次 tick 到了整点自然会补上；滞后触发时小时已经变了、立刻就刷。
     // 用显示时间而非设备时间：?ofs 是显示层的微调，整点应以用户看到的为准。
-    if (flashOn && displayHM().mm === '00') doFullClear();
+    if (flashOn) {
+      if (flashMin > 0) {
+        // 测试用：每 N 分钟刷一次，省得等一小时
+        tickCount++;
+        if (tickCount >= flashMin) { tickCount = 0; doFullClear(); }
+      } else {
+        var hh = displayHM().hh;
+        if (hh !== lastFlashHour) {
+          if (lastFlashHour !== '') doFullClear();  // 第一次只记录，不刷
+          lastFlashHour = hh;
+        }
+      }
+    }
+    // 调试模式下每分钟刷新一次读数，这样即使本次没刷也能看到 h 是否跟着小时前进了
+    if (debugMode) renderDebug();
     setTimeout(tick, msToNextMinute());
   }
 
