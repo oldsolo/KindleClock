@@ -11,7 +11,40 @@ Plain HTML + CSS + ES5 JavaScript. No build step, no dependencies.
 
 ---
 
-## Why this is unusual
+## What makes this one different
+
+**The time is actually correct — and on a Kindle that takes a workaround.** The device hides
+its timezone from JavaScript: set the Kindle to Beijing time and `getHours()` still returns
+UTC, so a dial reading 13:00 comes back as 5. `getTimezoneOffset()` is permanently 0 and
+`Intl` does not exist on this browser. The zone is genuinely undecidable in JavaScript, so
+this clock hardcodes UTC+8 rather than showing a confidently wrong hour. See
+[Time handling](#time-handling).
+
+**Four orientations, four different layouts.** A tap anywhere cycles
+90° → 0° → −90° → 180°. Landscape is a single rotated line with a two-dot separator;
+portrait puts the hours flush left above the minutes flush right, with no gap between them.
+Separate layouts, not one block of text turned on its side.
+
+**It fills the screen on a model it has never seen.** Every dimension is measured from the
+live viewport at runtime, with a fallback table keyed by exact physical screen size. No
+per-model CSS branches, no hardcoded pixel values.
+
+**It updates on the minute, and the error does not accumulate.** A recursive `setTimeout`
+re-derives its delay from the wall clock every time it fires, so per-timer imprecision never
+compounds: measured at ~0.35s constant after 3 hours, where the obvious `setInterval`
+version drifts 3s over the same span.
+
+**Written for e-ink, not for a browser.** The DOM is touched only when the minute actually
+changes, so the page never flickers and never ghosts itself. An optional hourly full-screen
+clear (`?flash=1`) removes the ghosting that does build up over the hours.
+
+**Three files, no build, no network, no PC.** Copy `index.html`, `style.css` and `app.js`
+to `/mnt/us/`, type a `file://` URL into the address bar, and the Kindle runs it standalone
+from then on. No dependencies, no `localStorage`, not a single outbound request.
+
+---
+
+## The browser is from 2009
 
 The Kindle browser is a WebKit build from roughly 2009 (Safari 4 era). Most modern web
 defaults are wrong on it:
@@ -34,13 +67,15 @@ Verified working on **Kindle 7 (Kindle 499, 600×800)** and **Kindle 10th gen**
 
 ## Features
 
-- **Beijing time by default (UTC+8)** — see [Time handling](#time-handling).
-- **Tap to rotate** — cycles four orientations, each with its own layout (see below).
-- **Fills the screen** in any orientation, on any model.
-- **Minute-boundary updates** with no cumulative drift.
-- Two-dot separator in landscape; in portrait the two rows touch with no gap.
-- Optional dark mode.
-- Optional hourly e-ink ghost clearing - see [E-ink ghosting](#e-ink-ghosting).
+Beyond the six points above:
+
+- Optional dark mode (`?tm=dark`).
+- Every layout variable is tunable at runtime — timezone, fill factor, position nudge —
+  and `?debug=1` prints measured viewport numbers plus calibration graphics for the case
+  where the browser chrome does not line up with the physical screen. See
+  [Query parameters](#query-parameters).
+- The hourly ghost clear is off by default; [E-ink ghosting](#e-ink-ghosting) explains what
+  it costs and why it has to look the way it does.
 
 ---
 
@@ -385,8 +420,8 @@ Measured on real hardware:
 ```
 KindleClock/
 ├── index.html   14 lines   markup + script tag
-├── style.css   118 lines   layout, two orientations, separator dots, dark mode
-├── app.js      391 lines   viewport, rotation, time, timers
+├── style.css   122 lines   layout, two orientations, separator dots, dark mode
+├── app.js      403 lines   viewport, rotation, time, timers, ghost clear
 ├── img/                    real-device photos of both orientations
 ├── AGENTS.md               platform constraints and hard-won gotchas
 ├── README.md               this file
